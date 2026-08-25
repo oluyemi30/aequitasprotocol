@@ -1,0 +1,6 @@
+{
+  "name": "Aequitas Protocol",
+  "description": "Autonomous AI-powered Stock Token strategy and portfolio balancing protocol on Robinhood Chain. Turn natural language financial goals into onchain strategies, simulations, and non-custodial transactions.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
