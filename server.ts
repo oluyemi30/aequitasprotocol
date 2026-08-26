@@ -28,13 +28,87 @@ async function startServer() {
     });
   };
 
+  // OpenRouter API Caller (Lazy / Safe)
+  const callOpenRouter = async (systemInstruction: string, userPrompt: string, jsonMode = false): Promise<string | null> => {
+    const openRouterKey = process.env.OPENROUTER_API_KEY;
+    if (!openRouterKey) return null;
+
+    try {
+      const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${openRouterKey}`,
+          'HTTP-Referer': 'https://aequitas.chain.robinhood.com',
+          'X-Title': 'Aequitas Protocol',
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          model: 'google/gemini-2.5-flash',
+          messages: [
+            { role: 'system', content: systemInstruction },
+            { role: 'user', content: userPrompt }
+          ],
+          response_format: jsonMode ? { type: 'json_object' } : undefined,
+          temperature: 0.2,
+        }),
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.warn('OpenRouter API response error:', response.status, errorText);
+        return null;
+      }
+
+      const data = await response.json();
+      const content = data.choices?.[0]?.message?.content;
+      return content || null;
+    } catch (err) {
+      console.warn('OpenRouter request failed:', err);
+      return null;
+    }
+  };
+
+  // Unified AI Generation Helper (Tries OpenRouter, then Gemini)
+  const generateAIContent = async (systemInstruction: string, promptText: string, jsonMode = false): Promise<string | null> => {
+    // 1. Try OpenRouter if configured
+    if (process.env.OPENROUTER_API_KEY) {
+      const openRouterResult = await callOpenRouter(systemInstruction, promptText, jsonMode);
+      if (openRouterResult) return openRouterResult;
+    }
+
+    // 2. Try Gemini GenAI SDK if configured
+    const ai = getGenAI();
+    if (ai) {
+      try {
+        const response = await ai.models.generateContent({
+          model: 'gemini-3.7-flash',
+          contents: promptText,
+          config: {
+            responseMimeType: jsonMode ? 'application/json' : undefined,
+            systemInstruction,
+          },
+        });
+        if (response.text) return response.text;
+      } catch (geminiErr) {
+        console.warn('Gemini API request failed:', geminiErr);
+      }
+    }
+
+    return null;
+  };
+
   // 1. Health Endpoint
   app.get('/api/health', (req, res) => {
+    const hasOpenRouter = !!process.env.OPENROUTER_API_KEY;
+    const hasGemini = !!process.env.GEMINI_API_KEY;
+
     res.json({
       status: 'ok',
-      service: 'RWA Agent - Robinhood Chain Programmable Strategy Engine',
+      service: 'Aequitas Protocol - Robinhood Chain Programmable Strategy Engine',
       time: new Date().toISOString(),
-      aiConfigured: !!process.env.GEMINI_API_KEY,
+      aiConfigured: hasOpenRouter || hasGemini,
+      openRouterConfigured: hasOpenRouter,
+      geminiConfigured: hasGemini,
     });
   });
 
@@ -259,33 +333,15 @@ async function startServer() {
     });
   });
 
-  // 3.5 AI RWA Strategy Generator Endpoint
+  // 3.5 AI Strategy Generator Endpoint
   app.post('/api/ai/strategy', async (req, res) => {
-    const { prompt: userPrompt, userCapital, maxConstraint, currentHoldings, networkMode } = req.body;
+    const { prompt: userPrompt, userCapital, maxConstraint, currentHoldings } = req.body;
     if (!userPrompt || typeof userPrompt !== 'string') {
       return res.status(400).json({ error: 'Missing prompt parameter' });
     }
 
-    const availableAssets = [
-      { symbol: 'NVDA', name: 'NVIDIA Corporation', sector: 'Semiconductors & AI', beta: 1.75 },
-      { symbol: 'MSFT', name: 'Microsoft Corporation', sector: 'Enterprise Cloud & AI', beta: 0.94 },
-      { symbol: 'GOOGL', name: 'Alphabet Inc.', sector: 'Search, Cloud & AI', beta: 1.05 },
-      { symbol: 'AAPL', name: 'Apple Inc.', sector: 'Consumer Tech & Hardware', beta: 1.12 },
-      { symbol: 'AMZN', name: 'Amazon.com Inc.', sector: 'Cloud & E-Commerce', beta: 1.18 },
-      { symbol: 'META', name: 'Meta Platforms', sector: 'Social & Open AI', beta: 1.25 },
-      { symbol: 'TSLA', name: 'Tesla Inc.', sector: 'EV & Robotics', beta: 2.34 },
-      { symbol: 'COIN', name: 'Coinbase Global', sector: 'Web3 & Financial Infra', beta: 2.85 },
-      { symbol: 'SPY', name: 'SPDR S&P 500 ETF', sector: 'Broad Market Equity', beta: 1.00 },
-      { symbol: 'QQQ', name: 'Invesco QQQ Trust', sector: 'Nasdaq Tech Equity', beta: 1.15 },
-    ];
-
-    const ai = getGenAI();
-    if (!ai) {
-      return res.json({ fallback: true, message: 'AI client not initialized, using deterministic strategy parser' });
-    }
-
     try {
-      const systemInstruction = `You are RWA Agent, an onchain financial strategy synthesizer built for Robinhood Chain stock tokens.
+      const systemInstruction = `You are Aequitas Protocol, an onchain financial strategy synthesizer built for Robinhood Chain stock tokens.
 Your sole job is to translate user natural language financial goals into a strict, mathematically sound stock token allocation strategy.
 
 Supported Robinhood Stock Tokens:
@@ -317,27 +373,18 @@ Current Wallet Holdings: ${JSON.stringify(currentHoldings || [])}
 
 Synthesize a structured Robinhood Chain stock token strategy now.`;
 
-      const response = await ai.models.generateContent({
-        model: 'gemini-3.7-flash',
-        contents: promptText,
-        config: {
-          responseMimeType: 'application/json',
-          systemInstruction,
-        },
-      });
-
-      const text = response.text;
-      if (!text) {
+      const rawText = await generateAIContent(systemInstruction, promptText, true);
+      if (!rawText) {
         return res.json({ fallback: true });
       }
 
-      const parsed = JSON.parse(text);
+      const parsed = JSON.parse(rawText);
       res.json({
         ...parsed,
         isAiGenerated: true,
       });
     } catch (err) {
-      console.warn('Gemini API strategy synthesis error, fallback enabled:', err);
+      console.warn('AI strategy synthesis error, fallback enabled:', err);
       res.json({ fallback: true });
     }
   });
@@ -349,14 +396,9 @@ Synthesize a structured Robinhood Chain stock token strategy now.`;
       return res.status(400).json({ error: 'Missing portfolioSummary payload' });
     }
 
-    const ai = getGenAI();
-    if (!ai) {
-      // Deterministic fallback if API key is not present
-      return res.json({ fallback: true });
-    }
-
     try {
-      const prompt = `You are StockLens AI, an institutional-grade portfolio intelligence assistant built specifically for Robinhood Chain tokenized stocks.
+      const systemInstruction = 'You are Aequitas Protocol, a quantitative blockchain and portfolio risk analysis engine. Always output valid JSON conforming strictly to the requested schema.';
+      const promptText = `You are Aequitas Protocol, an institutional-grade portfolio intelligence assistant built specifically for Robinhood Chain tokenized stocks.
 Analyze the following Robinhood Chain portfolio holdings:
 Total Value: $${portfolioSummary.totalValue}
 24H Change: ${portfolioSummary.change24hPercent}% ($${portfolioSummary.change24hAmount})
@@ -399,46 +441,32 @@ Return your response strictly in the following JSON format:
   ]
 }`;
 
-      const response = await ai.models.generateContent({
-        model: 'gemini-3.7-flash',
-        contents: prompt,
-        config: {
-          responseMimeType: 'application/json',
-          systemInstruction: 'You are StockLens AI, a quantitative blockchain and portfolio risk analysis engine. Always output valid JSON conforming strictly to the requested schema.',
-        },
-      });
-
-      const text = response.text;
-      if (!text) {
+      const rawText = await generateAIContent(systemInstruction, promptText, true);
+      if (!rawText) {
         return res.json({ fallback: true });
       }
 
-      const parsed = JSON.parse(text);
+      const parsed = JSON.parse(rawText);
       res.json({
         ...parsed,
         isAIPowered: true,
       });
     } catch (err) {
-      console.warn('Gemini API portfolio analysis failed, triggering fallback:', err);
+      console.warn('AI portfolio analysis failed, triggering fallback:', err);
       res.json({ fallback: true });
     }
   });
 
-  // 5. AI "Ask StockLens" Copilot Endpoint
+  // 5. AI "Ask Aequitas" Copilot Endpoint
   app.post('/api/ai/ask', async (req, res) => {
     const { question, portfolioSummary } = req.body;
     if (!question) {
       return res.status(400).json({ error: 'Missing question parameter' });
     }
 
-    const ai = getGenAI();
-    if (!ai) {
-      // Deterministic calculation response if API key is not present
-      return res.json({ fallback: true });
-    }
-
     try {
-      const prompt = `You are StockLens AI, the quantitative portfolio intelligence copilot for Robinhood Chain stock tokens.
+      const systemInstruction = 'You are Aequitas Protocol, an objective fintech quantitative portfolio assistant. Give crisp, mathematically grounded answers with exact dollar and percentage calculations based on the user holdings provided.';
+      const promptText = `You are Aequitas Protocol AI, the quantitative portfolio intelligence copilot for Robinhood Chain stock tokens.
 User's Question: "${question}"
 
 Current Portfolio State on Robinhood Chain:
@@ -459,23 +487,15 @@ Instructions:
 2. Maintain institutional clarity and objectivity.
 3. NEVER give financial/investment advice (do not tell them to buy/sell).
 4. Emphasize that onchain settlement on Robinhood Chain provides instant 24/7 liquidity and transparency.
-5. End with the formal disclaimer: "StockLens AI provides informational analysis and simulations only. It is not financial advice."`;
+5. End with the formal disclaimer: "Aequitas Protocol provides informational analysis and simulations only. It is not financial advice."`;
 
-      const response = await ai.models.generateContent({
-        model: 'gemini-3.7-flash',
-        contents: prompt,
-        config: {
-          systemInstruction: 'You are StockLens AI, an objective fintech quantitative portfolio assistant. Give crisp, mathematically grounded answers with exact dollar and percentage calculations based on the user holdings provided.',
-        },
-      });
-
-      const text = response.text;
+      const rawText = await generateAIContent(systemInstruction, promptText, false);
       res.json({
-        answer: text || 'Unable to generate response at this time.',
-        isAIPowered: true,
+        answer: rawText || 'Unable to generate response at this time.',
+        isAIPowered: !!rawText,
       });
     } catch (err) {
-      console.warn('Gemini API ask failed, using fallback:', err);
+      console.warn('AI copilot ask failed, using fallback:', err);
       res.json({ fallback: true });
     }
   });
@@ -527,10 +547,10 @@ Instructions:
   }
 
   app.listen(PORT, '0.0.0.0', () => {
-    console.log(`StockLens AI server running on http://0.0.0.0:${PORT}`);
+    console.log(`Aequitas Protocol server running on http://0.0.0.0:${PORT}`);
   });
 }
 
 startServer().catch((err) => {
-  console.error('Failed to start StockLens AI server:', err);
+  console.error('Failed to start Aequitas Protocol server:', err);
 });
