@@ -91,45 +91,51 @@ export const AllocationView: React.FC<AllocationViewProps> = ({ holdings, totalV
       {/* Chart & Legend layout */}
       <div className="mt-4 grid grid-cols-1 lg:grid-cols-12 gap-6 items-center">
         {/* Donut chart */}
-        <div className="lg:col-span-5 h-56 relative flex items-center justify-center">
-          <ResponsiveContainer width="100%" height="100%">
-            <PieChart>
-              <Pie
-                data={activeData}
-                cx="50%"
-                cy="50%"
-                innerRadius={55}
-                outerRadius={80}
-                paddingAngle={3}
-                dataKey="value"
-              >
-                {activeData.map((entry, index) => (
-                  <Cell key={`cell-${index}`} fill={entry.color} stroke="#050505" strokeWidth={2} />
-                ))}
-              </Pie>
-              <Tooltip
-                content={({ active, payload }) => {
-                  if (active && payload && payload.length) {
-                    const data = payload[0].payload;
-                    return (
-                      <div className="p-3 rounded-xl glass-panel-elevated shadow-2xl text-xs backdrop-blur-md border border-white/10">
-                        <div className="font-bold text-white">{data.name}</div>
-                        <div className="font-mono text-[#ADF802] mt-0.5 font-semibold">
-                          ${Number(data.value).toLocaleString('en-US', { minimumFractionDigits: 2 })} ({data.percentage}%)
+        <div className="lg:col-span-5 h-56 relative flex items-center justify-center min-h-[224px]">
+          {activeData && activeData.length > 0 ? (
+            <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={180}>
+              <PieChart>
+                <Pie
+                  data={activeData}
+                  cx="50%"
+                  cy="50%"
+                  innerRadius={55}
+                  outerRadius={80}
+                  paddingAngle={3}
+                  dataKey="value"
+                >
+                  {activeData.map((entry, index) => (
+                    <Cell key={`cell-${index}`} fill={entry.color} stroke="#050505" strokeWidth={2} />
+                  ))}
+                </Pie>
+                <Tooltip
+                  content={({ active, payload }) => {
+                    if (active && payload && payload.length) {
+                      const data = payload[0].payload;
+                      return (
+                        <div className="p-3 rounded-xl glass-panel-elevated shadow-2xl text-xs backdrop-blur-md border border-white/10">
+                          <div className="font-bold text-white">{data.name}</div>
+                          <div className="font-mono text-[#ADF802] mt-0.5 font-semibold">
+                            ${Number(data.value).toLocaleString('en-US', { minimumFractionDigits: 2 })} ({data.percentage}%)
+                          </div>
                         </div>
-                      </div>
-                    );
-                  }
-                  return null;
-                }}
-              />
-            </PieChart>
-          </ResponsiveContainer>
+                      );
+                    }
+                    return null;
+                  }}
+                />
+              </PieChart>
+            </ResponsiveContainer>
+          ) : (
+            <div className="h-full flex items-center justify-center text-xs text-slate-500 font-mono">
+              No allocation data available
+            </div>
+          )}
 
           {/* Center stats in donut */}
           <div className="absolute flex flex-col items-center justify-center pointer-events-none text-center">
             <span className="text-[9px] text-slate-500 uppercase tracking-widest font-bold">Positions</span>
-            <span className="text-xl font-bold font-mono text-white stat-value">{holdings.length}</span>
+            <span className="text-xl font-bold font-mono text-white stat-value">{holdings?.length || 0}</span>
           </div>
         </div>
 

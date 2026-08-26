@@ -92,76 +92,82 @@ export const PortfolioChart: React.FC<PortfolioChartProps> = ({ currentValue }) 
       </div>
 
       {/* Chart container */}
-      <div className="mt-4 h-64 sm:h-72 w-full">
-        <ResponsiveContainer width="100%" height="100%">
-          <AreaChart data={chartData} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
-            <defs>
-              <linearGradient id="sophisticatedDarkGreenGradient" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="5%" stopColor="#ADF802" stopOpacity={0.25} />
-                <stop offset="95%" stopColor="#ADF802" stopOpacity={0.0} />
-              </linearGradient>
-            </defs>
-            <CartesianGrid strokeDasharray="3 3" stroke="rgba(255, 255, 255, 0.05)" vertical={false} />
-            <XAxis 
-              dataKey="date" 
-              stroke="#64748b" 
-              fontSize={11} 
-              tickLine={false} 
-              axisLine={false} 
-              dy={10} 
-            />
-            <YAxis 
-              stroke="#64748b" 
-              fontSize={11} 
-              tickLine={false} 
-              axisLine={false} 
-              domain={yDomain}
-              tickFormatter={(v) => `$${(v / 1000).toFixed(1)}k`}
-              dx={-5}
-            />
-            <Tooltip
-              content={({ active, payload }) => {
-                if (active && payload && payload.length) {
-                  const data = payload[0].payload;
-                  return (
-                    <div className="p-3 rounded-xl glass-panel-elevated shadow-2xl text-xs backdrop-blur-md border border-white/10">
-                      <div className="text-slate-400 font-mono text-[10px] mb-1 uppercase tracking-wider">{data.date}</div>
-                      <div className="flex items-center justify-between gap-4 font-mono font-bold text-[#ADF802]">
-                        <span className="font-sans font-medium text-slate-300">Portfolio:</span>
-                        <span>${Number(data.value).toLocaleString('en-US', { minimumFractionDigits: 2 })}</span>
-                      </div>
-                      {showBenchmark && data.benchmark && (
-                        <div className="flex items-center justify-between gap-4 font-mono text-[#5E5CE6] text-[11px] mt-1">
-                          <span className="font-sans font-medium text-slate-400">S&P Token Index:</span>
-                          <span>${Number(data.benchmark).toLocaleString('en-US', { minimumFractionDigits: 2 })}</span>
-                        </div>
-                      )}
-                    </div>
-                  );
-                }
-                return null;
-              }}
-            />
-            <Area
-              type="monotone"
-              dataKey="value"
-              stroke="#ADF802"
-              strokeWidth={2}
-              fillOpacity={1}
-              fill="url(#sophisticatedDarkGreenGradient)"
-            />
-            {showBenchmark && (
-              <Line
-                type="monotone"
-                dataKey="benchmark"
-                stroke="#5E5CE6"
-                strokeWidth={1.5}
-                strokeDasharray="4 4"
-                dot={false}
+      <div className="mt-4 h-64 sm:h-72 w-full min-h-[256px]">
+        {chartData && chartData.length > 0 ? (
+          <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={200}>
+            <AreaChart data={chartData} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
+              <defs>
+                <linearGradient id="sophisticatedDarkGreenGradient" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="5%" stopColor="#ADF802" stopOpacity={0.25} />
+                  <stop offset="95%" stopColor="#ADF802" stopOpacity={0.0} />
+                </linearGradient>
+              </defs>
+              <CartesianGrid strokeDasharray="3 3" stroke="rgba(255, 255, 255, 0.05)" vertical={false} />
+              <XAxis 
+                dataKey="date" 
+                stroke="#64748b" 
+                fontSize={11} 
+                tickLine={false} 
+                axisLine={false} 
+                dy={10} 
               />
-            )}
-          </AreaChart>
-        </ResponsiveContainer>
+              <YAxis 
+                stroke="#64748b" 
+                fontSize={11} 
+                tickLine={false} 
+                axisLine={false} 
+                domain={yDomain}
+                tickFormatter={(v) => `$${(v / 1000).toFixed(1)}k`}
+                dx={-5}
+              />
+              <Tooltip
+                content={({ active, payload }) => {
+                  if (active && payload && payload.length) {
+                    const data = payload[0].payload;
+                    return (
+                      <div className="p-3 rounded-xl glass-panel-elevated shadow-2xl text-xs backdrop-blur-md border border-white/10">
+                        <div className="text-slate-400 font-mono text-[10px] mb-1 uppercase tracking-wider">{data.date}</div>
+                        <div className="flex items-center justify-between gap-4 font-mono font-bold text-[#ADF802]">
+                          <span className="font-sans font-medium text-slate-300">Portfolio:</span>
+                          <span>${Number(data.value).toLocaleString('en-US', { minimumFractionDigits: 2 })}</span>
+                        </div>
+                        {showBenchmark && data.benchmark && (
+                          <div className="flex items-center justify-between gap-4 font-mono text-[#5E5CE6] text-[11px] mt-1">
+                            <span className="font-sans font-medium text-slate-400">S&P Token Index:</span>
+                            <span>${Number(data.benchmark).toLocaleString('en-US', { minimumFractionDigits: 2 })}</span>
+                          </div>
+                        )}
+                      </div>
+                    );
+                  }
+                  return null;
+                }}
+              />
+              <Area
+                type="monotone"
+                dataKey="value"
+                stroke="#ADF802"
+                strokeWidth={2}
+                fillOpacity={1}
+                fill="url(#sophisticatedDarkGreenGradient)"
+              />
+              {showBenchmark && (
+                <Line
+                  type="monotone"
+                  dataKey="benchmark"
+                  stroke="#5E5CE6"
+                  strokeWidth={1.5}
+                  strokeDasharray="4 4"
+                  dot={false}
+                />
+              )}
+            </AreaChart>
+          </ResponsiveContainer>
+        ) : (
+          <div className="h-full flex items-center justify-center text-xs text-slate-500 font-mono">
+            Loading performance telemetry...
+          </div>
+        )}
       </div>
 
       {/* Clear financial disclaimer for simulated chart series */}

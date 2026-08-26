@@ -28,7 +28,9 @@ export class ErrorBoundary extends React.Component<Props, State> {
   }
 
   private handleReload = () => {
+    localStorage.removeItem('aequitas_wallet_mode');
     localStorage.removeItem('stocklens_wallet_mode');
+    localStorage.removeItem('aequitas_wallet_address');
     window.location.reload();
   };
 

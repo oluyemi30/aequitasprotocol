@@ -27,17 +27,25 @@ export function useStockLensRegistry(
         // Check localStorage demo profile or return default registered handle
         const savedDemo = localStorage.getItem(`stocklens_profile_${address.toLowerCase()}`);
         if (savedDemo) {
-          const parsed = JSON.parse(savedDemo);
-          setProfile(parsed);
-        } else {
-          setProfile({
-            address,
-            profileName: 'BigYemy',
-            createdAt: Math.floor(Date.now() / 1000) - 86400 * 14,
-            exists: true,
-            txHash: '0x8f2d93e4b1a75c3289d04f112e45a980753b81792341e06d9147e62a1b9e28f1',
-          });
+          try {
+            const parsed = JSON.parse(savedDemo);
+            if (parsed && typeof parsed === 'object') {
+              setProfile(parsed);
+              setIsLoadingProfile(false);
+              return;
+            }
+          } catch {
+            // invalid JSON fallback
+          }
         }
+        
+        setProfile({
+          address,
+          profileName: 'BigYemy',
+          createdAt: Math.floor(Date.now() / 1000) - 86400 * 14,
+          exists: true,
+          txHash: '0x8f2d93e4b1a75c3289d04f112e45a980753b81792341e06d9147e62a1b9e28f1',
+        });
         setIsLoadingProfile(false);
         return;
       }
@@ -77,8 +85,16 @@ export function useStockLensRegistry(
       } catch (err) {
         // If contract not deployed yet on this specific RPC, check local state
         const savedLocal = localStorage.getItem(`stocklens_profile_${address.toLowerCase()}`);
+        let parsedLocal = null;
         if (savedLocal) {
-          setProfile(JSON.parse(savedLocal));
+          try {
+            parsedLocal = JSON.parse(savedLocal);
+          } catch {
+            parsedLocal = null;
+          }
+        }
+        if (parsedLocal && typeof parsedLocal === 'object') {
+          setProfile(parsedLocal);
         } else {
           setProfile({
             address,
