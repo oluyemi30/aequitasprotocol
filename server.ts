@@ -28,15 +28,25 @@ async function startServer() {
     });
   };
 
+  // Clean markdown fences from JSON responses
+  const extractCleanJson = (raw: string): string => {
+    let clean = raw.trim();
+    if (clean.startsWith('```json')) {
+      clean = clean.replace(/^```json\s*/, '').replace(/\s*```$/, '');
+    } else if (clean.startsWith('```')) {
+      clean = clean.replace(/^```\s*/, '').replace(/\s*```$/, '');
+    }
+    return clean.trim();
+  };
+
   // OpenRouter API Caller (Lazy / Safe / Credit-optimized)
   const callOpenRouter = async (systemInstruction: string, userPrompt: string, jsonMode = false): Promise<string | null> => {
     const openRouterKey = process.env.OPENROUTER_API_KEY;
     if (!openRouterKey) return null;
 
-    // Models prioritized by speed, low token cost, and JSON schema fidelity
+    // Verified OpenRouter model identifiers with auto-routing
     const candidateModels = [
-      'google/gemini-2.0-flash-001',
-      'google/gemini-flash-1.5',
+      'openrouter/auto',
       'google/gemini-2.5-flash',
       'meta-llama/llama-3.3-70b-instruct:free',
       'deepseek/deepseek-chat',
@@ -65,19 +75,17 @@ async function startServer() {
         });
 
         if (!response.ok) {
-          const errorText = await response.text();
-          console.warn(`OpenRouter model ${model} error (${response.status}):`, errorText.slice(0, 180));
-          // Try next model if credits or rate limits occurred
+          // If credit limit or not found, try next candidate or fall through
           continue;
         }
 
         const data = await response.json();
         const content = data.choices?.[0]?.message?.content;
         if (content && typeof content === 'string') {
-          return content;
+          return extractCleanJson(content);
         }
       } catch (err) {
-        console.warn(`OpenRouter request failed for model ${model}:`, err);
+        // Continue to next provider/model
       }
     }
 
@@ -107,9 +115,9 @@ async function startServer() {
               maxOutputTokens: 1200,
             },
           });
-          if (response.text) return response.text;
+          if (response.text) return extractCleanJson(response.text);
         } catch (geminiErr: any) {
-          console.warn(`Gemini SDK request on ${model} failed (${geminiErr?.status || geminiErr?.message || 'unknown'}), trying next candidate...`);
+          // Try next model if available
         }
       }
     }
