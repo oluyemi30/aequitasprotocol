@@ -143,18 +143,44 @@ export async function getDemoPortfolio(walletAddress = '0x123479B8206dFA02cD7E36
   ];
 
   const holdings: Holding[] = demoHoldingsConfig.map((item) => {
-    const token = demoTokens.find(t => t.symbol === item.symbol)!;
-    const priceData = priceMap[item.symbol];
-    const value = item.quantity * priceData.price;
+    const token = demoTokens.find(t => t.symbol === item.symbol) || {
+      symbol: item.symbol,
+      name: `${item.symbol} Token`,
+      contractAddress: '0x1000000000000000000000000000000000000000',
+      chainId: 4663,
+      logo: 'https://images.unsplash.com/photo-1611974789855-9c2a0a7236a3?w=128&auto=format&fit=crop&q=80',
+      decimals: 18,
+      sector: 'Technology',
+      industry: 'Equities',
+      marketCap: '$1T',
+      peRatio: 25,
+      dividendYield: 0.5,
+      beta: 1.0,
+      description: '',
+      currentMultiplier: 1.0,
+      tradingStatus: 'active' as const,
+    };
+    const priceData = priceMap[item.symbol] || {
+      symbol: item.symbol,
+      price: 150.0,
+      change24h: 1.0,
+      change24hPercent: 0.7,
+      high24h: 152.0,
+      low24h: 148.0,
+      volume24h: '10M',
+      lastUpdated: new Date().toISOString(),
+    };
+    const price = priceData?.price || 150.0;
+    const value = item.quantity * price;
     return {
       token,
       balanceRaw: BigInt(Math.floor(item.quantity * 1e18)),
       balanceFormatted: item.quantity,
-      price: priceData.price,
+      price,
       value,
       allocationPercentage: 0,
-      change24h: priceData.change24h,
-      change24hPercent: priceData.change24hPercent,
+      change24h: priceData?.change24h || 0,
+      change24hPercent: priceData?.change24hPercent || 0,
     };
   });
 

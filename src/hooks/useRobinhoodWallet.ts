@@ -124,7 +124,16 @@ export function useRobinhoodWallet() {
 
   // Connect injected EVM wallet (MetaMask, Rabby, Coinbase, etc.)
   const connectInjected = async (customProvider?: any) => {
-    const provider = customProvider || activeProvider || window.ethereum;
+    let provider = customProvider || activeProvider;
+    
+    // Resolve injected provider (handling multiple extensions if present)
+    if (!provider && typeof window !== 'undefined' && window.ethereum) {
+      if (Array.isArray(window.ethereum.providers)) {
+        provider = window.ethereum.providers.find((p: any) => p.isMetaMask) || window.ethereum.providers[0];
+      } else {
+        provider = window.ethereum;
+      }
+    }
 
     if (!provider) {
       setWalletState((prev) => ({
@@ -146,9 +155,14 @@ export function useRobinhoodWallet() {
         throw new Error('No accounts selected');
       }
 
-      const rawChainId = await provider.request({ method: 'eth_chainId' });
-      const currentChainId = parseInt(rawChainId, 16);
-      const resolvedChain = isNaN(currentChainId) ? DEFAULT_CHAIN_ID : currentChainId;
+      let resolvedChain = DEFAULT_CHAIN_ID;
+      try {
+        const rawChainId = await provider.request({ method: 'eth_chainId' });
+        const currentChainId = parseInt(rawChainId, 16);
+        resolvedChain = isNaN(currentChainId) ? DEFAULT_CHAIN_ID : currentChainId;
+      } catch {
+        resolvedChain = DEFAULT_CHAIN_ID;
+      }
 
       setActiveProvider(provider);
       setWalletState({
@@ -172,16 +186,20 @@ export function useRobinhoodWallet() {
         await switchNetwork(DEFAULT_CHAIN_ID, provider);
       }
     } catch (err: any) {
-      console.warn('Wallet connection error:', err);
-      let errorMsg = 'Failed to connect wallet';
+      console.warn('Wallet connection notice:', err);
+      let errorMsg = 'Failed to connect to MetaMask / Web3 Wallet';
       const msg = err?.message || String(err || '');
-      if (err?.code === 4001) {
-        errorMsg = 'Connection request was cancelled by user';
-      } else if (msg.includes('disconnected port') || msg.includes('Extension context')) {
-        errorMsg = 'Browser extension port disconnected. Try reloading the page, opening in a new tab, or using the 1-Click Demo Sandbox.';
+      
+      if (err?.code === 4001 || msg.includes('rejected') || msg.includes('cancelled')) {
+        errorMsg = 'Connection request was cancelled by user.';
+      } else if (err?.code === -32002 || msg.includes('Already processing')) {
+        errorMsg = 'MetaMask is already waiting for your approval. Please open your MetaMask extension popup.';
+      } else if (msg.includes('disconnected port') || msg.includes('Extension context') || msg.includes('Failed to connect to MetaMask')) {
+        errorMsg = 'Browser extension was unable to establish connection in this window. Try opening the app in a new tab or use the 1-Click Demo Sandbox.';
       } else if (err?.message) {
         errorMsg = err.message;
       }
+
       setWalletState((prev) => ({
         ...prev,
         isConnecting: false,

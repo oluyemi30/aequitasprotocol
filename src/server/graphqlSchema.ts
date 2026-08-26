@@ -370,9 +370,15 @@ export const schema = new GraphQLSchema({
 });
 
 export async function executeGraphQLQuery(query: string, variables?: Record<string, any>) {
-  return await graphql({
-    schema,
-    source: query,
-    variableValues: variables,
-  });
+  try {
+    return await graphql({
+      schema,
+      source: query,
+      variableValues: variables,
+    });
+  } catch (err: any) {
+    return {
+      errors: [{ message: err?.message || 'GraphQL execution error' }],
+    };
+  }
 }

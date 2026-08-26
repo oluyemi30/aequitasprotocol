@@ -160,11 +160,35 @@ export const ConnectWalletModal: React.FC<ConnectWalletModalProps> = ({
           
           {/* Error Banner if any */}
           {error && (
-            <div className="p-3 rounded-xl bg-rose-500/10 border border-rose-500/20 text-rose-300 text-xs flex items-start gap-2.5">
-              <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
-              <div className="flex-1">
-                <div className="font-semibold">Connection Notice</div>
-                <div className="text-[11px] text-rose-200/90 mt-0.5">{error}</div>
+            <div className="p-3.5 rounded-xl bg-rose-500/10 border border-rose-500/20 text-rose-300 text-xs flex flex-col gap-2.5">
+              <div className="flex items-start gap-2.5">
+                <AlertCircle className="w-4 h-4 shrink-0 mt-0.5 text-rose-400" />
+                <div className="flex-1">
+                  <div className="font-semibold text-rose-200">Connection Notice</div>
+                  <div className="text-[11px] text-rose-200/90 mt-0.5">{error}</div>
+                </div>
+              </div>
+              <div className="flex flex-wrap items-center gap-2 pt-1 border-t border-rose-500/20">
+                <button
+                  type="button"
+                  onClick={() => {
+                    onConnectDemo();
+                    onClose();
+                  }}
+                  className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-[#ADF802] hover:bg-[#9ee002] text-black font-bold text-[11px] transition-colors"
+                >
+                  <Sparkles className="w-3 h-3" />
+                  <span>Launch 1-Click Demo Sandbox</span>
+                </button>
+                <a
+                  href={window.location.href}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-white/10 hover:bg-white/20 text-white text-[11px] font-medium transition-colors"
+                >
+                  <span>Open in New Tab</span>
+                  <ArrowUpRight className="w-3 h-3" />
+                </a>
               </div>
             </div>
           )}

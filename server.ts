@@ -28,7 +28,7 @@ async function startServer() {
     });
   };
 
-  // Clean markdown fences from JSON responses
+  // Clean markdown fences and extract pure JSON objects
   const extractCleanJson = (raw: string): string => {
     let clean = raw.trim();
     if (clean.startsWith('```json')) {
@@ -36,20 +36,35 @@ async function startServer() {
     } else if (clean.startsWith('```')) {
       clean = clean.replace(/^```\s*/, '').replace(/\s*```$/, '');
     }
-    return clean.trim();
+    clean = clean.trim();
+    const firstBrace = clean.indexOf('{');
+    const lastBrace = clean.lastIndexOf('}');
+    if (firstBrace !== -1 && lastBrace !== -1 && lastBrace > firstBrace) {
+      return clean.substring(firstBrace, lastBrace + 1);
+    }
+    return clean;
   };
 
-  // OpenRouter API Caller (Lazy / Safe / Credit-optimized)
-  const callOpenRouter = async (systemInstruction: string, userPrompt: string, jsonMode = false): Promise<string | null> => {
+  interface AIResponseResult {
+    content: string;
+    provider: 'openrouter' | 'gemini' | 'deterministic';
+    model?: string;
+  }
+
+  // OpenRouter API Caller (Primary AI Workhorse)
+  const callOpenRouter = async (systemInstruction: string, userPrompt: string, jsonMode = false): Promise<{ content: string; model: string } | null> => {
     const openRouterKey = process.env.OPENROUTER_API_KEY;
     if (!openRouterKey) return null;
 
-    // Verified OpenRouter model identifiers with auto-routing
+    // Prioritized OpenRouter models for financial reasoning and JSON fidelity
     const candidateModels = [
       'openrouter/auto',
       'google/gemini-2.5-flash',
-      'meta-llama/llama-3.3-70b-instruct:free',
+      'anthropic/claude-3.5-haiku',
+      'meta-llama/llama-3.3-70b-instruct',
+      'mistralai/mistral-small-24b-instruct-2501',
       'deepseek/deepseek-chat',
+      'qwen/qwen-2.5-72b-instruct',
     ];
 
     for (const model of candidateModels) {
@@ -57,7 +72,7 @@ async function startServer() {
         const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
           method: 'POST',
           headers: {
-            'Authorization': `Bearer ${openRouterKey}`,
+            'Authorization': `Bearer ${openRouterKey.trim()}`,
             'HTTP-Referer': 'https://aequitas.chain.robinhood.com',
             'X-Title': 'Aequitas Protocol',
             'Content-Type': 'application/json',
@@ -70,37 +85,46 @@ async function startServer() {
             ],
             response_format: jsonMode ? { type: 'json_object' } : undefined,
             temperature: 0.2,
-            max_tokens: 1200, // Explicitly bound token reservation to fit remaining balance
+            max_tokens: 1500,
           }),
         });
 
         if (!response.ok) {
-          // If credit limit or not found, try next candidate or fall through
           continue;
         }
 
         const data = await response.json();
         const content = data.choices?.[0]?.message?.content;
         if (content && typeof content === 'string') {
-          return extractCleanJson(content);
+          console.log(`[OpenRouter AI] Successfully generated response using model: ${model}`);
+          return {
+            content: extractCleanJson(content),
+            model,
+          };
         }
       } catch (err) {
-        // Continue to next provider/model
+        // Try next candidate
       }
     }
 
     return null;
   };
 
-  // Unified AI Generation Helper (Tries OpenRouter with bounded tokens, then multi-model Gemini)
-  const generateAIContent = async (systemInstruction: string, promptText: string, jsonMode = false): Promise<string | null> => {
-    // 1. Try OpenRouter if configured
+  // Unified AI Generation Helper (Primary: OpenRouter, Secondary: Gemini SDK)
+  const generateAIContent = async (systemInstruction: string, promptText: string, jsonMode = false): Promise<AIResponseResult | null> => {
+    // 1. Primary: OpenRouter AI API
     if (process.env.OPENROUTER_API_KEY) {
       const openRouterResult = await callOpenRouter(systemInstruction, promptText, jsonMode);
-      if (openRouterResult) return openRouterResult;
+      if (openRouterResult) {
+        return {
+          content: openRouterResult.content,
+          provider: 'openrouter',
+          model: openRouterResult.model,
+        };
+      }
     }
 
-    // 2. Try Gemini GenAI SDK with multi-model fallback against 503 capacity spikes
+    // 2. Secondary Fallback: Gemini GenAI SDK
     const ai = getGenAI();
     if (ai) {
       const geminiCandidateModels = ['gemini-2.5-flash', 'gemini-2.0-flash', 'gemini-3.7-flash'];
@@ -112,10 +136,17 @@ async function startServer() {
             config: {
               responseMimeType: jsonMode ? 'application/json' : undefined,
               systemInstruction,
-              maxOutputTokens: 1200,
+              maxOutputTokens: 1500,
             },
           });
-          if (response.text) return extractCleanJson(response.text);
+          if (response.text) {
+            console.log(`[Gemini AI] Fallback generated response using model: ${model}`);
+            return {
+              content: extractCleanJson(response.text),
+              provider: 'gemini',
+              model,
+            };
+          }
         } catch (geminiErr: any) {
           // Try next model if available
         }
@@ -401,15 +432,17 @@ Current Wallet Holdings: ${JSON.stringify(currentHoldings || [])}
 
 Synthesize a structured Robinhood Chain stock token strategy now.`;
 
-      const rawText = await generateAIContent(systemInstruction, promptText, true);
-      if (!rawText) {
+      const aiResult = await generateAIContent(systemInstruction, promptText, true);
+      if (!aiResult || !aiResult.content) {
         return res.json({ fallback: true });
       }
 
-      const parsed = JSON.parse(rawText);
+      const parsed = JSON.parse(aiResult.content);
       res.json({
         ...parsed,
         isAiGenerated: true,
+        provider: aiResult.provider,
+        model: aiResult.model,
       });
     } catch (err) {
       console.warn('AI strategy synthesis error, fallback enabled:', err);
@@ -469,15 +502,17 @@ Return your response strictly in the following JSON format:
   ]
 }`;
 
-      const rawText = await generateAIContent(systemInstruction, promptText, true);
-      if (!rawText) {
+      const aiResult = await generateAIContent(systemInstruction, promptText, true);
+      if (!aiResult || !aiResult.content) {
         return res.json({ fallback: true });
       }
 
-      const parsed = JSON.parse(rawText);
+      const parsed = JSON.parse(aiResult.content);
       res.json({
         ...parsed,
         isAIPowered: true,
+        provider: aiResult.provider,
+        model: aiResult.model,
       });
     } catch (err) {
       console.warn('AI portfolio analysis failed, triggering fallback:', err);
@@ -517,10 +552,12 @@ Instructions:
 4. Emphasize that onchain settlement on Robinhood Chain provides instant 24/7 liquidity and transparency.
 5. End with the formal disclaimer: "Aequitas Protocol provides informational analysis and simulations only. It is not financial advice."`;
 
-      const rawText = await generateAIContent(systemInstruction, promptText, false);
+      const aiResult = await generateAIContent(systemInstruction, promptText, false);
       res.json({
-        answer: rawText || 'Unable to generate response at this time.',
-        isAIPowered: !!rawText,
+        answer: aiResult?.content || 'Unable to generate response at this time.',
+        isAIPowered: !!aiResult?.content,
+        provider: aiResult?.provider || 'fallback',
+        model: aiResult?.model,
       });
     } catch (err) {
       console.warn('AI copilot ask failed, using fallback:', err);
@@ -532,13 +569,20 @@ Instructions:
   const handleGraphQL = async (req: express.Request, res: express.Response) => {
     try {
       let query = req.body?.query || req.query?.query;
-      const variables = req.body?.variables || (req.query?.variables ? JSON.parse(req.query.variables as string) : undefined);
+      let variables = req.body?.variables;
+      if (!variables && req.query?.variables) {
+        try {
+          variables = typeof req.query.variables === 'string' ? JSON.parse(req.query.variables) : req.query.variables;
+        } catch {
+          variables = undefined;
+        }
+      }
 
       if (typeof req.body === 'string' && req.headers['content-type']?.includes('application/graphql')) {
         query = req.body;
       }
 
-      if (!query) {
+      if (!query || typeof query !== 'string') {
         return res.status(400).json({
           errors: [{ message: 'Must provide query string.' }],
         });
@@ -548,8 +592,8 @@ Instructions:
       res.json(result);
     } catch (err: any) {
       console.error('GraphQL Execution Error:', err);
-      res.status(500).json({
-        errors: [{ message: err.message || 'Internal GraphQL execution error.' }],
+      res.status(200).json({
+        errors: [{ message: err?.message || 'Internal GraphQL execution error.' }],
       });
     }
   };
