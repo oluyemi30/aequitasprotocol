@@ -179,8 +179,8 @@ flowchart TD
 
 ### 1. Clone & Install Dependencies
 ```bash
-git clone https://github.com/oluyemi30/RWA-agent-.git
-cd RWA-agent-
+git clone https://github.com/oluyemi30/aequitasprotocol.git
+cd aequitasprotocol
 npm install
 ```
 
