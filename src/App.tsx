@@ -27,7 +27,6 @@ import { ScenarioSimulator } from './components/simulator/ScenarioSimulator';
 import { AssetsDirectory } from './components/assets/AssetsDirectory';
 import { AssetDetailModal } from './components/assets/AssetDetailModal';
 import { OnchainProfileModal } from './components/profile/OnchainProfileModal';
-import { GraphQLExplorerModal } from './components/graphql/GraphQLExplorerModal';
 import { ConnectWalletModal } from './components/ConnectWalletModal';
 
 // RWA Agent Strategy Components
@@ -51,7 +50,6 @@ export function App() {
   const [activeTab, setActiveTab] = useState<'strategy' | 'rebalance' | 'simulator' | 'holdings'>('strategy');
   const [selectedAssetSymbol, setSelectedAssetSymbol] = useState<string | null>(null);
   const [isProfileModalOpen, setIsProfileModalOpen] = useState<boolean>(false);
-  const [isGraphQLModalOpen, setIsGraphQLModalOpen] = useState<boolean>(false);
 
   // Wallet Hook
   const {
@@ -161,7 +159,6 @@ export function App() {
         onDisconnect={disconnect}
         onSwitchNetwork={switchNetwork}
         onOpenProfileModal={() => setIsProfileModalOpen(true)}
-        onOpenGraphQLModal={() => setIsGraphQLModalOpen(true)}
         onRefresh={refreshPortfolio}
         isRefreshing={isRefreshing}
       />
@@ -379,13 +376,6 @@ export function App() {
         walletAddress={address}
       />
 
-      {/* Robinhood Chain GraphQL API Explorer Modal */}
-      <GraphQLExplorerModal
-        isOpen={isGraphQLModalOpen}
-        onClose={() => setIsGraphQLModalOpen(false)}
-        chainId={chainId}
-      />
-
       {/* Connect Wallet & Web3 Provider Selection Modal */}
       <ConnectWalletModal
         isOpen={isConnectModalOpen}
@@ -419,13 +409,6 @@ export function App() {
           </div>
 
           <div className="flex flex-wrap items-center justify-center gap-6 text-[11px] font-medium text-slate-400">
-            <button
-              onClick={() => setIsGraphQLModalOpen(true)}
-              className="flex items-center gap-1.5 text-[#ADF802] hover:underline font-mono cursor-pointer"
-            >
-              <span className="w-1.5 h-1.5 rounded-full bg-[#ADF802]" />
-              GraphQL API (/api/graphql)
-            </button>
             <span className="flex items-center gap-1.5 text-slate-400">
               <span className="w-1.5 h-1.5 rounded-full bg-[#ADF802]" />
               Robinhood RPC Connected

@@ -12,8 +12,7 @@ import {
   Coins, 
   LayoutDashboard, 
   LogOut,
-  RefreshCw,
-  Code2
+  RefreshCw
 } from 'lucide-react';
 import { formatAddress, getBlockscoutUrl, ROBINHOOD_NETWORKS } from '../lib/robinhood-chain';
 import { OnchainProfile } from '../types';
@@ -38,7 +37,6 @@ interface NavbarProps {
   onDisconnect: () => void;
   onSwitchNetwork: (targetChainId: number) => void;
   onOpenProfileModal: () => void;
-  onOpenGraphQLModal?: () => void;
   onRefresh: () => void;
   isRefreshing?: boolean;
 }
@@ -61,7 +59,6 @@ export const Navbar: React.FC<NavbarProps> = ({
   onDisconnect,
   onSwitchNetwork,
   onOpenProfileModal,
-  onOpenGraphQLModal,
   onRefresh,
   isRefreshing = false,
 }) => {
@@ -155,19 +152,6 @@ export const Navbar: React.FC<NavbarProps> = ({
 
         {/* Right Action Bar */}
         <div className="flex items-center gap-2.5">
-          {/* GraphQL API Explorer button */}
-          {onOpenGraphQLModal && (
-            <button
-              id="open-graphql-btn"
-              onClick={onOpenGraphQLModal}
-              title="Open Robinhood Chain GraphQL API Console"
-              className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg glass-panel text-slate-300 hover:text-white hover:border-[#ADF802]/40 transition-colors text-xs font-mono cursor-pointer"
-            >
-              <Code2 className="w-3.5 h-3.5 text-[#ADF802]" />
-              <span className="hidden sm:inline">GraphQL</span>
-            </button>
-          )}
-
           {/* Refresh data button */}
           {isConnected && (
             <button
