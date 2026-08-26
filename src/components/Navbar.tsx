@@ -28,9 +28,11 @@ interface NavbarProps {
   isConnected: boolean;
   isConnecting: boolean;
   isDemoWallet: boolean;
+  isWatchOnly?: boolean;
   ethBalance: number;
   isCorrectNetwork: boolean;
   profile: OnchainProfile | null;
+  onOpenConnectModal: () => void;
   onConnectInjected: () => void;
   onConnectDemo: () => void;
   onDisconnect: () => void;
@@ -49,9 +51,11 @@ export const Navbar: React.FC<NavbarProps> = ({
   isConnected,
   isConnecting,
   isDemoWallet,
+  isWatchOnly = false,
   ethBalance,
   isCorrectNetwork,
   profile,
+  onOpenConnectModal,
   onConnectInjected,
   onConnectDemo,
   onDisconnect,
@@ -282,8 +286,13 @@ export const Navbar: React.FC<NavbarProps> = ({
                   <span className="font-mono text-slate-300">{formatAddress(address)}</span>
                 )}
                 {isDemoWallet && (
-                  <span className="text-[9px] px-1.5 py-0.2 rounded bg-cyan-500/20 text-cyan-300 border border-cyan-500/30 font-mono">
+                  <span className="text-[9px] px-1.5 py-0.2 rounded bg-[#ADF802]/20 text-[#ADF802] border border-[#ADF802]/30 font-mono font-bold">
                     DEMO
+                  </span>
+                )}
+                {isWatchOnly && (
+                  <span className="text-[9px] px-1.5 py-0.2 rounded bg-amber-500/20 text-amber-300 border border-amber-500/30 font-mono font-bold">
+                    WATCH
                   </span>
                 )}
                 <ChevronDown className="w-3 h-3 text-slate-400" />
@@ -295,7 +304,12 @@ export const Navbar: React.FC<NavbarProps> = ({
                   onMouseLeave={() => setWalletDropdownOpen(false)}
                 >
                   <div className="px-3 py-2 border-b border-white/5">
-                    <div className="text-[10px] text-slate-500 uppercase font-bold tracking-wider">Connected Address</div>
+                    <div className="flex items-center justify-between">
+                      <div className="text-[10px] text-slate-500 uppercase font-bold tracking-wider">
+                        {isWatchOnly ? 'Observed Wallet' : isDemoWallet ? 'Demo Wallet' : 'Connected Address'}
+                      </div>
+                      <span className="text-[9px] font-mono text-slate-400">Robinhood Chain</span>
+                    </div>
                     <div className="font-mono text-xs text-slate-200 break-all select-all mt-0.5">
                       {address}
                     </div>
@@ -344,31 +358,18 @@ export const Navbar: React.FC<NavbarProps> = ({
                     </a>
                   </div>
 
-                  {/* Disconnect / Switch options */}
+                  {/* Switch / Connect Options */}
                   <div className="px-2 pt-1.5">
-                    {isDemoWallet ? (
-                      <button
-                        onClick={() => {
-                          onConnectInjected();
-                          setWalletDropdownOpen(false);
-                        }}
-                        className="w-full px-2.5 py-1.5 rounded-lg text-left text-xs flex items-center gap-2 text-cyan-400 hover:bg-white/5 transition-colors"
-                      >
-                        <Wallet className="w-3.5 h-3.5" />
-                        Connect Injected Wallet
-                      </button>
-                    ) : (
-                      <button
-                        onClick={() => {
-                          onConnectDemo();
-                          setWalletDropdownOpen(false);
-                        }}
-                        className="w-full px-2.5 py-1.5 rounded-lg text-left text-xs flex items-center gap-2 text-slate-400 hover:bg-white/5 hover:text-white transition-colors"
-                      >
-                        <Layers className="w-3.5 h-3.5" />
-                        Switch to Demo Wallet
-                      </button>
-                    )}
+                    <button
+                      onClick={() => {
+                        onOpenConnectModal();
+                        setWalletDropdownOpen(false);
+                      }}
+                      className="w-full px-2.5 py-1.5 rounded-lg text-left text-xs flex items-center gap-2 text-slate-300 hover:bg-white/5 hover:text-[#ADF802] transition-colors"
+                    >
+                      <Wallet className="w-3.5 h-3.5 text-[#ADF802]" />
+                      Switch / Change Wallet
+                    </button>
                     <button
                       onClick={() => {
                         onDisconnect();
@@ -388,16 +389,16 @@ export const Navbar: React.FC<NavbarProps> = ({
               <button
                 id="connect-demo-wallet-btn"
                 onClick={onConnectDemo}
-                className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-lg glass-panel text-slate-300 text-xs font-medium hover:text-white hover:border-white/30 transition-colors"
+                className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-lg glass-panel text-slate-300 text-xs font-medium hover:text-white hover:border-[#ADF802]/30 transition-colors"
               >
-                <Sparkles className="w-3.5 h-3.5 text-[#5E5CE6]" />
+                <Sparkles className="w-3.5 h-3.5 text-[#ADF802]" />
                 Demo Mode
               </button>
               <button
                 id="connect-wallet-btn"
-                onClick={onConnectInjected}
+                onClick={onOpenConnectModal}
                 disabled={isConnecting}
-                className="flex items-center gap-2 px-3.5 py-1.5 rounded-lg bg-[#ADF802] hover:bg-[#9ee002] text-black text-xs font-bold shadow-md shadow-[#ADF802]/20 transition-colors disabled:opacity-50"
+                className="flex items-center gap-2 px-3.5 py-1.5 rounded-lg bg-[#ADF802] hover:bg-[#9ee002] text-black text-xs font-bold shadow-md shadow-[#ADF802]/20 transition-colors disabled:opacity-50 cursor-pointer"
               >
                 <Wallet className="w-3.5 h-3.5" />
                 {isConnecting ? 'Connecting...' : 'Connect Wallet'}

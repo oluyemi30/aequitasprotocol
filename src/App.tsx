@@ -28,6 +28,7 @@ import { AssetsDirectory } from './components/assets/AssetsDirectory';
 import { AssetDetailModal } from './components/assets/AssetDetailModal';
 import { OnchainProfileModal } from './components/profile/OnchainProfileModal';
 import { GraphQLExplorerModal } from './components/graphql/GraphQLExplorerModal';
+import { ConnectWalletModal } from './components/ConnectWalletModal';
 
 // RWA Agent Strategy Components
 import { StrategyPromptInput } from './components/strategy/StrategyPromptInput';
@@ -59,12 +60,20 @@ export function App() {
     isConnected,
     isConnecting,
     isDemoWallet,
+    isWatchOnly,
     ethBalance,
     isCorrectNetwork,
+    isConnectModalOpen,
+    openConnectModal,
+    closeConnectModal,
+    discoveredProviders,
     connectInjected,
     connectDemoWallet,
+    connectCustomAddress,
     disconnect,
     switchNetwork,
+    addRobinhoodChain,
+    error: walletError,
   } = useRobinhoodWallet();
 
   // Stock Tokens Registry Hook
@@ -142,9 +151,11 @@ export function App() {
         isConnected={isConnected}
         isConnecting={isConnecting}
         isDemoWallet={isDemoWallet}
+        isWatchOnly={isWatchOnly}
         ethBalance={ethBalance}
         isCorrectNetwork={isCorrectNetwork}
         profile={profile}
+        onOpenConnectModal={openConnectModal}
         onConnectInjected={connectInjected}
         onConnectDemo={connectDemoWallet}
         onDisconnect={disconnect}
@@ -161,7 +172,7 @@ export function App() {
           /* Landing Screen */
           <div className="space-y-12">
             <LandingHero
-              onLaunchApp={connectInjected}
+              onLaunchApp={openConnectModal}
               onTryDemo={() => {
                 connectDemoWallet();
                 setActiveTab('strategy');
@@ -372,6 +383,20 @@ export function App() {
       <GraphQLExplorerModal
         isOpen={isGraphQLModalOpen}
         onClose={() => setIsGraphQLModalOpen(false)}
+        chainId={chainId}
+      />
+
+      {/* Connect Wallet & Web3 Provider Selection Modal */}
+      <ConnectWalletModal
+        isOpen={isConnectModalOpen}
+        onClose={closeConnectModal}
+        onConnectInjected={connectInjected}
+        onConnectDemo={connectDemoWallet}
+        onConnectCustomAddress={connectCustomAddress}
+        onAddNetwork={addRobinhoodChain}
+        discoveredProviders={discoveredProviders}
+        isConnecting={isConnecting}
+        error={walletError}
         chainId={chainId}
       />
 
