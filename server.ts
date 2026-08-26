@@ -603,6 +603,11 @@ Instructions:
   app.post('/graphql', handleGraphQL);
   app.get('/graphql', handleGraphQL);
 
+  // Ory Network verification endpoint
+  app.get('/.well-known/ory-verify.txt', (req, res) => {
+    res.type('text/plain').send('ory-verify=orynth-2788542eadfe48fba0ad5717a6110ffe\n');
+  });
+
   // Mount Vite middleware in development, or serve static dist in production
   if (process.env.NODE_ENV !== 'production') {
     const vite = await createViteServer({
