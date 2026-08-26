@@ -28,47 +28,63 @@ async function startServer() {
     });
   };
 
-  // OpenRouter API Caller (Lazy / Safe)
+  // OpenRouter API Caller (Lazy / Safe / Credit-optimized)
   const callOpenRouter = async (systemInstruction: string, userPrompt: string, jsonMode = false): Promise<string | null> => {
     const openRouterKey = process.env.OPENROUTER_API_KEY;
     if (!openRouterKey) return null;
 
-    try {
-      const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${openRouterKey}`,
-          'HTTP-Referer': 'https://aequitas.chain.robinhood.com',
-          'X-Title': 'Aequitas Protocol',
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          model: 'google/gemini-2.5-flash',
-          messages: [
-            { role: 'system', content: systemInstruction },
-            { role: 'user', content: userPrompt }
-          ],
-          response_format: jsonMode ? { type: 'json_object' } : undefined,
-          temperature: 0.2,
-        }),
-      });
+    // Models prioritized by speed, low token cost, and JSON schema fidelity
+    const candidateModels = [
+      'google/gemini-2.0-flash-001',
+      'google/gemini-flash-1.5',
+      'google/gemini-2.5-flash',
+      'meta-llama/llama-3.3-70b-instruct:free',
+      'deepseek/deepseek-chat',
+    ];
 
-      if (!response.ok) {
-        const errorText = await response.text();
-        console.warn('OpenRouter API response error:', response.status, errorText);
-        return null;
+    for (const model of candidateModels) {
+      try {
+        const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${openRouterKey}`,
+            'HTTP-Referer': 'https://aequitas.chain.robinhood.com',
+            'X-Title': 'Aequitas Protocol',
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            model,
+            messages: [
+              { role: 'system', content: systemInstruction },
+              { role: 'user', content: userPrompt }
+            ],
+            response_format: jsonMode ? { type: 'json_object' } : undefined,
+            temperature: 0.2,
+            max_tokens: 1200, // Explicitly bound token reservation to fit remaining balance
+          }),
+        });
+
+        if (!response.ok) {
+          const errorText = await response.text();
+          console.warn(`OpenRouter model ${model} error (${response.status}):`, errorText.slice(0, 180));
+          // Try next model if credits or rate limits occurred
+          continue;
+        }
+
+        const data = await response.json();
+        const content = data.choices?.[0]?.message?.content;
+        if (content && typeof content === 'string') {
+          return content;
+        }
+      } catch (err) {
+        console.warn(`OpenRouter request failed for model ${model}:`, err);
       }
-
-      const data = await response.json();
-      const content = data.choices?.[0]?.message?.content;
-      return content || null;
-    } catch (err) {
-      console.warn('OpenRouter request failed:', err);
-      return null;
     }
+
+    return null;
   };
 
-  // Unified AI Generation Helper (Tries OpenRouter, then Gemini)
+  // Unified AI Generation Helper (Tries OpenRouter with bounded tokens, then multi-model Gemini)
   const generateAIContent = async (systemInstruction: string, promptText: string, jsonMode = false): Promise<string | null> => {
     // 1. Try OpenRouter if configured
     if (process.env.OPENROUTER_API_KEY) {
@@ -76,21 +92,25 @@ async function startServer() {
       if (openRouterResult) return openRouterResult;
     }
 
-    // 2. Try Gemini GenAI SDK if configured
+    // 2. Try Gemini GenAI SDK with multi-model fallback against 503 capacity spikes
     const ai = getGenAI();
     if (ai) {
-      try {
-        const response = await ai.models.generateContent({
-          model: 'gemini-3.7-flash',
-          contents: promptText,
-          config: {
-            responseMimeType: jsonMode ? 'application/json' : undefined,
-            systemInstruction,
-          },
-        });
-        if (response.text) return response.text;
-      } catch (geminiErr) {
-        console.warn('Gemini API request failed:', geminiErr);
+      const geminiCandidateModels = ['gemini-2.5-flash', 'gemini-2.0-flash', 'gemini-3.7-flash'];
+      for (const model of geminiCandidateModels) {
+        try {
+          const response = await ai.models.generateContent({
+            model,
+            contents: promptText,
+            config: {
+              responseMimeType: jsonMode ? 'application/json' : undefined,
+              systemInstruction,
+              maxOutputTokens: 1200,
+            },
+          });
+          if (response.text) return response.text;
+        } catch (geminiErr: any) {
+          console.warn(`Gemini SDK request on ${model} failed (${geminiErr?.status || geminiErr?.message || 'unknown'}), trying next candidate...`);
+        }
       }
     }
 

@@ -172,10 +172,13 @@ export function useRobinhoodWallet() {
         await switchNetwork(DEFAULT_CHAIN_ID, provider);
       }
     } catch (err: any) {
-      console.error('Wallet connection error:', err);
+      console.warn('Wallet connection error:', err);
       let errorMsg = 'Failed to connect wallet';
+      const msg = err?.message || String(err || '');
       if (err?.code === 4001) {
         errorMsg = 'Connection request was cancelled by user';
+      } else if (msg.includes('disconnected port') || msg.includes('Extension context')) {
+        errorMsg = 'Browser extension port disconnected. Try reloading the page, opening in a new tab, or using the 1-Click Demo Sandbox.';
       } else if (err?.message) {
         errorMsg = err.message;
       }
@@ -333,12 +336,20 @@ export function useRobinhoodWallet() {
       }
     };
 
-    provider.on?.('accountsChanged', handleAccountsChanged);
-    provider.on?.('chainChanged', handleChainChanged);
+    try {
+      provider.on?.('accountsChanged', handleAccountsChanged);
+      provider.on?.('chainChanged', handleChainChanged);
+    } catch (listenerErr) {
+      console.warn('Could not attach provider event listeners (extension port may be disconnected):', listenerErr);
+    }
 
     return () => {
-      provider.removeListener?.('accountsChanged', handleAccountsChanged);
-      provider.removeListener?.('chainChanged', handleChainChanged);
+      try {
+        provider.removeListener?.('accountsChanged', handleAccountsChanged);
+        provider.removeListener?.('chainChanged', handleChainChanged);
+      } catch (removeErr) {
+        // Silently ignore port disconnection errors during cleanup
+      }
     };
   }, [activeProvider, walletState.isDemoWallet, walletState.isWatchOnly, walletState.chainId, walletState.address, disconnect, fetchEthBalance]);
 
