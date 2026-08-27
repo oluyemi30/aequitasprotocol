@@ -605,7 +605,7 @@ Instructions:
 
   // Ory Network verification endpoint
   app.get('/.well-known/ory-verify.txt', (req, res) => {
-    res.type('text/plain').send('ory-verify=orynth-2788542eadfe48fba0ad5717a6110ffe\n');
+    res.type('text/plain').send('ory-verify=orynth-047000cde68a4cb9b4038f5d279aa583\n');
   });
 
   // Mount Vite middleware in development, or serve static dist in production
