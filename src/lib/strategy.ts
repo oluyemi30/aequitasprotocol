@@ -77,9 +77,10 @@ export function validateStrategy(
   userUsdCapitalAvailable: number = 5000
 ): StrategyValidationResult {
   const rules: StrategyValidationRule[] = [];
+  const assets = Array.isArray(strategy?.assets) ? strategy.assets : [];
 
   // 1. Total Allocations sum to 100% (within 0.1% tolerance)
-  const totalAllocation = strategy.assets.reduce((sum, a) => sum + a.allocationPercent, 0);
+  const totalAllocation = assets.reduce((sum, a) => sum + (a?.allocationPercent || 0), 0);
   const isAllocation100 = Math.abs(totalAllocation - 100) < 0.2;
   rules.push({
     id: 'rule-sum-100',
@@ -92,7 +93,7 @@ export function validateStrategy(
   });
 
   // 2. Non-negative allocations
-  const hasNegative = strategy.assets.some((a) => a.allocationPercent <= 0);
+  const hasNegative = assets.some((a) => (a?.allocationPercent ?? 0) <= 0);
   rules.push({
     id: 'rule-positive-allocations',
     label: 'Positive Asset Allocations',
@@ -104,8 +105,8 @@ export function validateStrategy(
   });
 
   // 3. Max single asset allocation constraint
-  const maxSingle = Math.max(...strategy.assets.map((a) => a.allocationPercent), 0);
-  const maxLimit = strategy.maxSingleAssetAllocationPercent || 100;
+  const maxSingle = assets.length > 0 ? Math.max(...assets.map((a) => a?.allocationPercent || 0), 0) : 0;
+  const maxLimit = strategy?.maxSingleAssetAllocationPercent || 100;
   const isWithinMaxConstraint = maxSingle <= maxLimit + 0.1;
   rules.push({
     id: 'rule-max-constraint',
@@ -119,8 +120,8 @@ export function validateStrategy(
 
   // 4. Known Robinhood Stock Token validation
   const validTokens = ROBINHOOD_STOCK_TOKENS.map((t) => t.symbol.toUpperCase());
-  const invalidTokens = strategy.assets.filter(
-    (a) => !validTokens.includes(a.symbol.toUpperCase()) || !a.contractAddress || !a.contractAddress.startsWith('0x')
+  const invalidTokens = assets.filter(
+    (a) => !validTokens.includes((a?.symbol || '').toUpperCase()) || !a?.contractAddress || !a.contractAddress.startsWith('0x')
   );
   const areAllTokensLegit = invalidTokens.length === 0;
   rules.push({
@@ -128,37 +129,37 @@ export function validateStrategy(
     label: 'Verified Robinhood Stock Tokens',
     passed: areAllTokensLegit,
     message: areAllTokensLegit
-      ? `All ${strategy.assets.length} assets are verified Robinhood Chain Stock Token contracts`
-      : `Unrecognized or invalid token contracts detected: ${invalidTokens.map((t) => t.symbol).join(', ')}`,
+      ? `All ${assets.length} assets are verified Robinhood Chain Stock Token contracts`
+      : `Unrecognized or invalid token contracts detected: ${invalidTokens.map((t) => t?.symbol).join(', ')}`,
     severity: areAllTokensLegit ? 'info' : 'error',
   });
 
   // 5. Capital check
-  const isCapitalPositive = strategy.capital > 0;
+  const isCapitalPositive = (strategy?.capital || 0) > 0;
   rules.push({
     id: 'rule-capital-positive',
     label: 'Valid Strategy Capital',
     passed: isCapitalPositive,
     message: isCapitalPositive
-      ? `Strategy capital set to $${strategy.capital.toLocaleString()}`
+      ? `Strategy capital set to $${(strategy?.capital || 0).toLocaleString()}`
       : 'Strategy capital must be a positive dollar amount',
     severity: isCapitalPositive ? 'info' : 'error',
   });
 
   // 6. Gas Requirement calculation
   // Each asset execution requires ~1 approve + 1 swap transaction + 1 potential strategy registry
-  const totalTxCount = strategy.assets.length * 2 + 1;
+  const totalTxCount = assets.length * 2 + 1;
   const gasPerTxEth = 0.00015; // approximate at current Robinhood Chain gas price
   const totalGasReqEth = totalTxCount * gasPerTxEth;
-  const hasSufficientEth = userEthBalance >= totalGasReqEth;
+  const hasSufficientEth = (userEthBalance || 0) >= totalGasReqEth;
 
   rules.push({
     id: 'rule-gas-sufficiency',
     label: 'Gas Fee Sufficiency',
     passed: hasSufficientEth,
     message: hasSufficientEth
-      ? `Wallet holds ${userEthBalance.toFixed(4)} ETH (Estimated gas for ${totalTxCount} steps: ~${totalGasReqEth.toFixed(4)} ETH)`
-      : `Insufficient ETH for gas: required ~${totalGasReqEth.toFixed(4)} ETH, current balance ${userEthBalance.toFixed(4)} ETH`,
+      ? `Wallet holds ${(userEthBalance || 0).toFixed(4)} ETH (Estimated gas for ${totalTxCount} steps: ~${totalGasReqEth.toFixed(4)} ETH)`
+      : `Insufficient ETH for gas: required ~${totalGasReqEth.toFixed(4)} ETH, current balance ${(userEthBalance || 0).toFixed(4)} ETH`,
     severity: hasSufficientEth ? 'info' : 'error',
   });
 
@@ -166,13 +167,13 @@ export function validateStrategy(
 
   return {
     isValid: allPassed,
-    canExecute: allPassed && strategy.assets.length > 0,
+    canExecute: allPassed && assets.length > 0,
     totalAllocationPercent: totalAllocation,
     maxAllocationFound: maxSingle,
     rules,
     gasRequirementEth: totalGasReqEth,
     hasSufficientEth,
-    hasSufficientCapital: userUsdCapitalAvailable >= strategy.capital,
+    hasSufficientCapital: (userUsdCapitalAvailable || 0) >= (strategy?.capital || 0),
   };
 }
 

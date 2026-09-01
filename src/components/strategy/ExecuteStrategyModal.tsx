@@ -151,10 +151,10 @@ export const ExecuteStrategyModal: React.FC<Props> = ({
               {/* Assets list preview */}
               <div className="space-y-2">
                 <div className="text-xs font-semibold uppercase tracking-wider text-slate-400">
-                  Assets To Acquire ({strategy.assets.length}):
+                  Assets To Acquire ({strategy?.assets?.length || 0}):
                 </div>
                 <div className="space-y-1.5">
-                  {strategy.assets.map((asset) => (
+                  {(strategy?.assets || []).map((asset) => (
                     <div
                       key={asset.symbol}
                       className="p-2.5 rounded-lg bg-white/[0.02] border border-white/5 flex items-center justify-between text-xs"

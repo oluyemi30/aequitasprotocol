@@ -47,8 +47,11 @@ export const ProposedStrategyCard: React.FC<Props> = ({
   onExecuteClick,
 }) => {
   const network = ROBINHOOD_NETWORKS[chainId] || ROBINHOOD_NETWORKS[46630];
-  const maxAllocation = Math.max(...strategy.assets.map((a) => a.allocationPercent), 0);
-  const estimatedTxCount = strategy.assets.length * 2 + 1;
+  const assets = Array.isArray(strategy?.assets) ? strategy.assets : [];
+  const maxAllocation = assets.length > 0 ? Math.max(...assets.map((a) => a?.allocationPercent || 0), 0) : 0;
+  const estimatedTxCount = assets.length * 2 + 1;
+
+  if (!strategy) return null;
 
   return (
     <div className="glass-panel rounded-2xl p-5 sm:p-7 border border-white/10 shadow-2xl space-y-6">

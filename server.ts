@@ -604,8 +604,9 @@ Instructions:
   app.get('/graphql', handleGraphQL);
 
   // Ory Network verification endpoint
-  app.get('/.well-known/ory-verify.txt', (req, res) => {
-    res.type('text/plain').send('ory-verify=orynth-047000cde68a4cb9b4038f5d279aa583\n');
+  app.get(['/.well-known/ory-verify.txt', '/.well-known/ory-verify', '/ory-verify.txt'], (req, res) => {
+    res.setHeader('Content-Type', 'text/plain; charset=utf-8');
+    res.send('ory-verify=orynth-b72d31d0855c40b9aaef50b957201388\n');
   });
 
   // Mount Vite middleware in development, or serve static dist in production
