@@ -17,7 +17,8 @@ export const TransactionPlanCard: React.FC<Props> = ({
   canExecute,
 }) => {
   const network = ROBINHOOD_NETWORKS[chainId] || ROBINHOOD_NETWORKS[46630];
-  const totalGasEth = steps.reduce((sum, s) => sum + s.estimatedGasEth, 0);
+  const safeSteps = Array.isArray(steps) ? steps : [];
+  const totalGasEth = safeSteps.reduce((sum, s) => sum + (s?.estimatedGasEth || 0), 0);
 
   return (
     <div className="glass-panel rounded-2xl p-5 sm:p-7 border border-white/10 shadow-2xl space-y-6">
@@ -41,7 +42,7 @@ export const TransactionPlanCard: React.FC<Props> = ({
           disabled={!canExecute}
           className="px-4 py-2 rounded-xl bg-[#ADF802] hover:bg-[#9ee002] disabled:opacity-50 disabled:cursor-not-allowed text-black text-xs font-bold transition-all shadow-lg shadow-[#ADF802]/15 flex items-center gap-1.5 cursor-pointer"
         >
-          <span>Review & Execute ({steps.length} Steps)</span>
+          <span>Review & Execute ({safeSteps.length} Steps)</span>
           <ArrowRight className="w-3.5 h-3.5" />
         </button>
       </div>
@@ -54,7 +55,7 @@ export const TransactionPlanCard: React.FC<Props> = ({
         </div>
         <div>
           <span className="text-slate-500 block text-[11px]">Total Signatures:</span>
-          <span className="font-semibold text-white font-mono">{steps.length} Transactions</span>
+          <span className="font-semibold text-white font-mono">{safeSteps.length} Transactions</span>
         </div>
         <div>
           <span className="text-slate-500 block text-[11px]">Est. Gas Total:</span>
@@ -68,7 +69,7 @@ export const TransactionPlanCard: React.FC<Props> = ({
 
       {/* Steps List */}
       <div className="space-y-3">
-        {steps.map((step) => (
+        {safeSteps.map((step) => (
           <div
             key={step.id}
             className="p-4 rounded-xl bg-white/[0.02] border border-white/10 hover:border-white/20 transition-all space-y-3"

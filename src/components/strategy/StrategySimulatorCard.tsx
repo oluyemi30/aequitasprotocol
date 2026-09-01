@@ -26,6 +26,14 @@ export const StrategySimulatorCard: React.FC<Props> = ({
   onResetShocks,
   simulatedPortfolio,
 }) => {
+  if (!strategy || !simulatedPortfolio) return null;
+
+  const originalCapital = simulatedPortfolio.originalCapital ?? 0;
+  const simulatedCapital = simulatedPortfolio.simulatedCapital ?? 0;
+  const deltaUsd = simulatedPortfolio.deltaUsd ?? 0;
+  const deltaPercent = simulatedPortfolio.deltaPercent ?? 0;
+  const simulatedAssets = Array.isArray(simulatedPortfolio.simulatedAssets) ? simulatedPortfolio.simulatedAssets : [];
+
   return (
     <div className="glass-panel rounded-2xl p-5 sm:p-7 border border-white/10 shadow-2xl space-y-6">
       {/* Header */}
@@ -66,7 +74,7 @@ export const StrategySimulatorCard: React.FC<Props> = ({
             Base Capital
           </div>
           <div className="text-lg sm:text-xl font-bold font-mono text-white">
-            ${simulatedPortfolio.originalCapital.toLocaleString(undefined, { minimumFractionDigits: 2 })}
+            ${originalCapital.toLocaleString(undefined, { minimumFractionDigits: 2 })}
           </div>
         </div>
 
@@ -75,7 +83,7 @@ export const StrategySimulatorCard: React.FC<Props> = ({
             Simulated Portfolio Value
           </div>
           <div className="text-lg sm:text-xl font-bold font-mono text-white">
-            ${simulatedPortfolio.simulatedCapital.toLocaleString(undefined, { minimumFractionDigits: 2 })}
+            ${simulatedCapital.toLocaleString(undefined, { minimumFractionDigits: 2 })}
           </div>
         </div>
 
@@ -85,22 +93,22 @@ export const StrategySimulatorCard: React.FC<Props> = ({
           </div>
           <div
             className={`text-lg sm:text-xl font-bold font-mono flex items-center gap-1.5 ${
-              simulatedPortfolio.deltaUsd > 0
+              deltaUsd > 0
                 ? 'text-emerald-400'
-                : simulatedPortfolio.deltaUsd < 0
+                : deltaUsd < 0
                 ? 'text-rose-400'
                 : 'text-slate-300'
             }`}
           >
-            {simulatedPortfolio.deltaUsd > 0 ? (
+            {deltaUsd > 0 ? (
               <ArrowUpRight className="w-5 h-5" />
-            ) : simulatedPortfolio.deltaUsd < 0 ? (
+            ) : deltaUsd < 0 ? (
               <ArrowDownRight className="w-5 h-5" />
             ) : null}
             <span>
-              {simulatedPortfolio.deltaUsd >= 0 ? '+' : ''}
-              ${simulatedPortfolio.deltaUsd.toFixed(2)} ({simulatedPortfolio.deltaPercent >= 0 ? '+' : ''}
-              {simulatedPortfolio.deltaPercent.toFixed(2)}%)
+              {deltaUsd >= 0 ? '+' : ''}
+              ${deltaUsd.toFixed(2)} ({deltaPercent >= 0 ? '+' : ''}
+              {deltaPercent.toFixed(2)}%)
             </span>
           </div>
         </div>
@@ -114,8 +122,8 @@ export const StrategySimulatorCard: React.FC<Props> = ({
         </div>
 
         <div className="space-y-3">
-          {simulatedPortfolio.simulatedAssets.map((asset) => {
-            const currentShock = simulatedShocks[asset.symbol] || 0;
+          {simulatedAssets.map((asset) => {
+            const currentShock = (simulatedShocks && simulatedShocks[asset.symbol]) || 0;
             return (
               <div
                 key={asset.symbol}
@@ -129,8 +137,8 @@ export const StrategySimulatorCard: React.FC<Props> = ({
 
                   <div className="flex items-center gap-3 text-xs font-mono">
                     <span className="text-slate-400">
-                      Base: ${asset.originalValue.toFixed(2)} →{' '}
-                      <span className="text-white font-bold">${asset.newValue.toFixed(2)}</span>
+                      Base: ${(asset.originalValue || 0).toFixed(2)} →{' '}
+                      <span className="text-white font-bold">${(asset.newValue || 0).toFixed(2)}</span>
                     </span>
                     <span
                       className={`font-bold ${

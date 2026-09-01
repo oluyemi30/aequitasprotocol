@@ -27,6 +27,8 @@ export const HoldingsTable: React.FC<HoldingsTableProps> = ({
   const [searchQuery, setSearchQuery] = useState('');
   const [copiedAddress, setCopiedAddress] = useState<string | null>(null);
 
+  const safeHoldings = Array.isArray(holdings) ? holdings : [];
+
   const handleCopy = (e: React.MouseEvent, address: string) => {
     e.stopPropagation();
     navigator.clipboard.writeText(address);
@@ -34,7 +36,7 @@ export const HoldingsTable: React.FC<HoldingsTableProps> = ({
     setTimeout(() => setCopiedAddress(null), 2000);
   };
 
-  const filtered = holdings.filter(h => 
+  const filtered = safeHoldings.filter(h => 
     h.token.symbol.toLowerCase().includes(searchQuery.toLowerCase()) ||
     h.token.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
     h.token.sector.toLowerCase().includes(searchQuery.toLowerCase())
@@ -50,7 +52,7 @@ export const HoldingsTable: React.FC<HoldingsTableProps> = ({
               Holdings Breakdown
             </h2>
             <span className="px-2 py-0.5 rounded-full text-[10px] font-mono font-bold uppercase tracking-wider bg-white/5 text-slate-400 border border-white/5">
-              {holdings.length} Assets
+              {safeHoldings.length} Assets
             </span>
           </div>
           <p className="text-xs text-slate-400 mt-0.5">

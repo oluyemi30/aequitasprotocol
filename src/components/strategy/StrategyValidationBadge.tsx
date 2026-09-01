@@ -7,18 +7,21 @@ interface Props {
 }
 
 export const StrategyValidationBadge: React.FC<Props> = ({ validation }) => {
+  const rules = Array.isArray(validation?.rules) ? validation.rules : [];
+  const isValid = Boolean(validation?.isValid);
+
   return (
     <div className="glass-panel rounded-2xl p-5 border border-white/10 shadow-xl space-y-4">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
           <div
             className={`w-7 h-7 rounded-lg flex items-center justify-center ${
-              validation.isValid
+              isValid
                 ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20'
                 : 'bg-rose-500/10 text-rose-400 border border-rose-500/20'
             }`}
           >
-            {validation.isValid ? <ShieldCheck className="w-4 h-4" /> : <AlertCircle className="w-4 h-4" />}
+            {isValid ? <ShieldCheck className="w-4 h-4" /> : <AlertCircle className="w-4 h-4" />}
           </div>
           <div>
             <h4 className="text-sm font-bold text-white tracking-tight">Onchain Constraint & Risk Guard</h4>
@@ -30,17 +33,17 @@ export const StrategyValidationBadge: React.FC<Props> = ({ validation }) => {
 
         <span
           className={`px-2.5 py-1 rounded-full text-xs font-bold font-mono ${
-            validation.isValid
+            isValid
               ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20'
               : 'bg-rose-500/10 text-rose-400 border border-rose-500/20'
           }`}
         >
-          {validation.isValid ? 'ALL CONSTRAINTS PASSED ✓' : 'VALIDATION BLOCKED ✕'}
+          {isValid ? 'ALL CONSTRAINTS PASSED ✓' : 'VALIDATION BLOCKED ✕'}
         </span>
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2.5">
-        {validation.rules.map((rule) => (
+        {rules.map((rule) => (
           <div
             key={rule.id}
             className={`p-3 rounded-xl border text-xs space-y-1 transition-all ${

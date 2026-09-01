@@ -39,6 +39,9 @@ export const RebalanceWorkspace: React.FC<Props> = ({
     onApplyRebalanceAsStrategy(rebalancedStrategy);
   };
 
+  const totalPortfolioValue = portfolio?.totalValue ?? 0;
+  const diffs = Array.isArray(rebalanceData?.diffs) ? rebalanceData.diffs : [];
+
   return (
     <div className="glass-panel rounded-2xl p-5 sm:p-7 border border-white/10 shadow-2xl space-y-6">
       {/* Header */}
@@ -84,19 +87,19 @@ export const RebalanceWorkspace: React.FC<Props> = ({
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 p-4 rounded-xl bg-[#090909] border border-white/10 text-xs font-mono">
         <div>
           <span className="text-slate-500 block text-[11px]">Total Portfolio Value:</span>
-          <span className="text-base font-bold text-white">${portfolio.totalValue.toLocaleString()}</span>
+          <span className="text-base font-bold text-white">${totalPortfolioValue.toLocaleString()}</span>
         </div>
         <div>
           <span className="text-slate-500 block text-[11px]">Total to Trim (Sell):</span>
-          <span className="text-base font-bold text-rose-400">${rebalanceData.totalToSellUsd.toFixed(2)}</span>
+          <span className="text-base font-bold text-rose-400">${(rebalanceData?.totalToSellUsd ?? 0).toFixed(2)}</span>
         </div>
         <div>
           <span className="text-slate-500 block text-[11px]">Total to Re-allocate (Buy):</span>
-          <span className="text-base font-bold text-emerald-400">${rebalanceData.totalToBuyUsd.toFixed(2)}</span>
+          <span className="text-base font-bold text-emerald-400">${(rebalanceData?.totalToBuyUsd ?? 0).toFixed(2)}</span>
         </div>
         <div>
           <span className="text-slate-500 block text-[11px]">Required Swaps:</span>
-          <span className="text-base font-bold text-cyan-400">{rebalanceData.rebalanceTransactionsCount} Trades</span>
+          <span className="text-base font-bold text-cyan-400">{rebalanceData?.rebalanceTransactionsCount ?? 0} Trades</span>
         </div>
       </div>
 
@@ -114,7 +117,7 @@ export const RebalanceWorkspace: React.FC<Props> = ({
             </tr>
           </thead>
           <tbody className="divide-y divide-white/5 font-mono">
-            {rebalanceData.diffs.map((diff) => (
+            {diffs.map((diff) => (
               <tr key={diff.symbol} className="hover:bg-white/[0.02] transition-colors">
                 <td className="py-3 font-bold text-white flex items-center gap-2">
                   <div className="w-6 h-6 rounded bg-white/5 flex items-center justify-center text-[10px]">
@@ -127,39 +130,39 @@ export const RebalanceWorkspace: React.FC<Props> = ({
                 </td>
 
                 <td className="py-3 text-right text-slate-300">
-                  {diff.currentAllocationPercent.toFixed(1)}%
-                  <span className="text-[10px] text-slate-500 block">(${diff.currentValueUsd.toFixed(2)})</span>
+                  {(diff.currentAllocationPercent ?? 0).toFixed(1)}%
+                  <span className="text-[10px] text-slate-500 block">(${(diff.currentValueUsd ?? 0).toFixed(2)})</span>
                 </td>
 
                 <td className="py-3 text-right text-white font-bold">
-                  {diff.targetAllocationPercent.toFixed(1)}%
-                  <span className="text-[10px] text-slate-400 block">(${diff.targetValueUsd.toFixed(2)})</span>
+                  {(diff.targetAllocationPercent ?? 0).toFixed(1)}%
+                  <span className="text-[10px] text-slate-400 block">(${(diff.targetValueUsd ?? 0).toFixed(2)})</span>
                 </td>
 
                 <td
                   className={`py-3 text-right font-bold ${
-                    diff.diffAllocationPercent > 0
+                    (diff.diffAllocationPercent ?? 0) > 0
                       ? 'text-emerald-400'
-                      : diff.diffAllocationPercent < 0
+                      : (diff.diffAllocationPercent ?? 0) < 0
                       ? 'text-rose-400'
                       : 'text-slate-400'
                   }`}
                 >
-                  {diff.diffAllocationPercent > 0 ? '+' : ''}
-                  {diff.diffAllocationPercent.toFixed(1)}%
+                  {(diff.diffAllocationPercent ?? 0) > 0 ? '+' : ''}
+                  {(diff.diffAllocationPercent ?? 0).toFixed(1)}%
                 </td>
 
                 <td
                   className={`py-3 text-right font-bold ${
-                    diff.diffValueUsd > 0
+                    (diff.diffValueUsd ?? 0) > 0
                       ? 'text-emerald-400'
-                      : diff.diffValueUsd < 0
+                      : (diff.diffValueUsd ?? 0) < 0
                       ? 'text-rose-400'
                       : 'text-slate-400'
                   }`}
                 >
-                  {diff.diffValueUsd > 0 ? '+' : ''}
-                  ${diff.diffValueUsd.toFixed(2)}
+                  {(diff.diffValueUsd ?? 0) > 0 ? '+' : ''}
+                  ${(diff.diffValueUsd ?? 0).toFixed(2)}
                 </td>
 
                 <td className="py-3 text-center">

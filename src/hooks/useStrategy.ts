@@ -192,12 +192,13 @@ export function useStrategy(
 
   // Compute Simulated Portfolio Value
   const simulatedPortfolio = (() => {
-    const originalCapital = activeStrategy.capital;
+    const originalCapital = activeStrategy?.capital || 0;
     let simulatedCapital = 0;
+    const assets = Array.isArray(activeStrategy?.assets) ? activeStrategy.assets : [];
 
-    const simulatedAssets = activeStrategy.assets.map((asset) => {
-      const shock = simulatedShocks[asset.symbol] || 0;
-      const originalValue = asset.targetAmountUsd;
+    const simulatedAssets = assets.map((asset) => {
+      const shock = (simulatedShocks && simulatedShocks[asset.symbol]) || 0;
+      const originalValue = asset.targetAmountUsd || 0;
       const newValue = originalValue * (1 + shock / 100);
       simulatedCapital += newValue;
       return {
@@ -218,7 +219,7 @@ export function useStrategy(
       deltaUsd,
       deltaPercent,
       simulatedAssets,
-      hasShocks: Object.values(simulatedShocks).some((v) => v !== 0),
+      hasShocks: Object.values(simulatedShocks || {}).some((v) => v !== 0),
     };
   })();
 

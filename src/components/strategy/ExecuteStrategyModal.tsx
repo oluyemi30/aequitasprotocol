@@ -53,9 +53,10 @@ export const ExecuteStrategyModal: React.FC<Props> = ({
 }) => {
   const [hasConfirmedReview, setHasConfirmedReview] = useState<boolean>(false);
   const network = ROBINHOOD_NETWORKS[chainId] || ROBINHOOD_NETWORKS[46630];
-  const totalGasEth = steps.reduce((sum, s) => sum + s.estimatedGasEth, 0);
+  const safeSteps = Array.isArray(steps) ? steps : [];
+  const totalGasEth = safeSteps.reduce((sum, s) => sum + (s?.estimatedGasEth || 0), 0);
 
-  if (!isOpen) return null;
+  if (!isOpen || !strategy) return null;
 
   const handleStart = () => {
     setHasConfirmedReview(true);
@@ -116,12 +117,12 @@ export const ExecuteStrategyModal: React.FC<Props> = ({
                 <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 text-xs font-mono">
                   <div className="p-2.5 rounded-lg bg-white/[0.02] border border-white/5">
                     <span className="text-slate-500 block text-[11px]">Total Capital:</span>
-                    <span className="text-base font-bold text-white">${strategy.capital.toLocaleString()}</span>
+                    <span className="text-base font-bold text-white">${(strategy?.capital ?? 0).toLocaleString()}</span>
                   </div>
 
                   <div className="p-2.5 rounded-lg bg-white/[0.02] border border-white/5">
                     <span className="text-slate-500 block text-[11px]">Transactions:</span>
-                    <span className="text-base font-bold text-cyan-400">{steps.length} Steps</span>
+                    <span className="text-base font-bold text-cyan-400">{safeSteps.length} Steps</span>
                   </div>
 
                   <div className="p-2.5 rounded-lg bg-white/[0.02] border border-white/5">
@@ -234,8 +235,8 @@ export const ExecuteStrategyModal: React.FC<Props> = ({
 
               {/* Transaction Steps Stream */}
               <div className="space-y-3">
-                {steps.map((step, idx) => {
-                  const isCurrent = idx === summary.currentStepIndex;
+                {safeSteps.map((step, idx) => {
+                  const isCurrent = idx === (summary?.currentStepIndex ?? -1);
                   return (
                     <div
                       key={step.id}
